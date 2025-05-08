@@ -1,0 +1,21 @@
+{
+  "name": "cloudflare",
+  "version": "0.0.0",
+  "private": true,
+  "scripts": {
+    "deploy": "wrangler deploy",
+    "dev": "wrangler dev",
+    "start": "wrangler dev",
+    "test": "vitest"
+  },
+  "devDependencies": {
+    "@cloudflare/vitest-pool-workers": "^0.5.2",
+    "vitest": "2.1.8",
+    "wrangler": "^3.60.3"
+  },
+  "dependencies": {
+    "@supabase/supabase-js": "^2.47.2",
+    "dotenv": "^16.4.7",
+    "supabase": "^2.0.0"
+  }
+}
