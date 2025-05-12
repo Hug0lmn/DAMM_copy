@@ -22,13 +22,13 @@ To monitor and analyze wallet activity, the project relied on the following serv
 # 🔁 Workflow Example
 Here’s a typical flow of how the system operated:
 
-Trigger:
+### Trigger:
 A wallet (previously registered in a Helius webhook) initiates a transaction on the Solana blockchain — e.g., swapping 10 SOL for a new token.
 
-Webhook & Processing:
+### Webhook & Processing:
 Helius forwards the transaction data to the Cloudflare Worker, which extracts key information (e.g., transaction time, type, token involved).
 
-Analysis & Notification:
+### Analysis & Notification:
 
 The system checks if the token is new using the Supabase database.
 
