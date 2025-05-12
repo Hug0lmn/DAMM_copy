@@ -1,25 +1,25 @@
-🛑 Project Status
+# 🛑 Project Status
 This project has not been maintained since November 2024.
 
-📌 Project Overview
+# 📌 Project Overview
 The goal of this project was to track and notify me about suspicious transactions from specific crypto wallets, commonly referred to as "serial ruggers." At the time, these wallets were launching between 2 to 10 new tokens per day on the Solana blockchain.
 
-⚙️ Technologies Used
+# ⚙️ Technologies Used
 To monitor and analyze wallet activity, the project relied on the following services:
 
-Cloudflare Workers – to handle incoming webhook requests
+## Cloudflare Workers – to handle incoming webhook requests
 
-Helius – for blockchain webhooks and RPC access
+## Helius – for blockchain webhooks and RPC access
 
-Telegram API – for sending real-time alerts
+## Telegram API – for sending real-time alerts
 
-Raydium API – for swap data and liquidity info
+## Raydium API – for swap data and liquidity info
 
-Dexscreener API – for market insights
+## Dexscreener API – for market insights
 
-Supabase – for database storage and history tracking
+## Supabase – for database storage and history tracking
 
-🔁 Workflow Example
+# 🔁 Workflow Example
 Here’s a typical flow of how the system operated:
 
 Trigger:
