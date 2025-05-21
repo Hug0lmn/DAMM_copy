@@ -1,0 +1,221 @@
+/**
+ * Welcome to Cloudflare Workers! This is your first worker.
+ *
+ * - Run `npx wrangler dev src/index.js` in your terminal to start a development server
+ * - Open a browser tab at http://localhost:8787/ to see your worker in action
+ * - Run `npx wrangler publish src/index.js --name my-worker` to publish your worker
+ *
+ * Learn more at https://developers.cloudflare.com/workers/
+ */
+
+// src/templates/basic/index.ts
+import { Connection, PublicKey } from "@solana/web3.js";
+import { CpAmm } from "@meteora-ag/cp-amm-sdk";
+
+type Env = {
+  BOT_TOKEN: string;
+  CHAT_ID: string;
+  API_KEY: string;
+};
+
+type TokenTransfer = {
+  mint: string;
+  fromUserAccount: string;
+  toUserAccount: string;
+  tokenAmount: number;
+};
+
+type BodyType = {
+  feePayer: string;
+  type: string;
+  tokenTransfers: TokenTransfer[];
+  timestamp: number;
+};
+
+type AuthorEntry = {
+  name: string;
+  threadId: number;
+  amount: number;
+};
+
+type AuthorMap = Record<string, AuthorEntry>;
+
+type ListTokens = Record<
+  string,
+  {
+	amount: number;
+	price: number | null;
+	size: number | null;
+	ticker: string | null;
+  }
+>;
+
+const src_default = {
+  async fetch(request: Request, env: Env): Promise<Response> {
+	if (request.method === "POST") {
+	  const requestBody: BodyType[] = await request.json();
+	  const Body = requestBody[0];
+
+	  const authorMap: AuthorMap = {
+		'DbSjRwKCtxGu4XTfbfQLYHRviCPDoCiTtEGE9sQP7iHY': { name: "Scammeur 2", threadId: 2, amount: 0 },
+		'3HT99D3t3PHYojqkaagyx4xfQ9SjyUzS7F972ZjhRSyM': { name: "Follow scammeur 2", threadId: 5, amount: 0 },
+		'FNay34Y1YJ634DHyzgQPTHgqojAirbLKp3uPHTRDwCBn': { name: "Scammeur", threadId: 14, amount: 20 },
+		'FyAvdoJtjFhPgHFP7gHmrVPP5Cnbe4ebGzmmex54YPAv': { name: "Scammeur 4", threadId: 743, amount: 200 },
+		'GicMHZkMDxgpNt6EoW9ADd9ovEwQ7ZGooRWLxm2sTUFL': { name: "Follow scammeur 4", threadId: 748, amount: 0 },
+		'9xtNwPBdjM8WWmotpkUscwMwWqspggduKvAsHRiYpdkN': { name: "Scammeur 5", threadId: 750, amount: 0 },
+		'CRBYGyfcRSiwcpUr4qxbVeR7MDNb32mkhxxzFAN7iinS': { name: "Scammeur 3", threadId: 752, amount: 0 },
+		'73W5Lh2jxuqevFyYTWRhdPZ9ZskScHKt2GLUiZU2qQcP': { name: "DAMM copy", threadId: 2, amount: 0 },
+	  };
+
+	  const isTargeted = authorMap[Body.feePayer] &&
+		(Body.type === "TRANSFER" || Body.type === "UNKNOWN") &&
+		(Body.tokenTransfers[0].fromUserAccount === "HLnpSz9h2S4hiLQ43rnSD9XkcUThA7B8hQMKmDaiTLcC" ||
+		  Body.tokenTransfers[0].toUserAccount === "HLnpSz9h2S4hiLQ43rnSD9XkcUThA7B8hQMKmDaiTLcC");
+
+	  if (isTargeted) {
+		console.log("Received POST request with body:", Body);
+
+		const first_token = await this.getTokenSymbol(env, Body.tokenTransfers[0].mint);
+		const second_token = await this.getTokenSymbol(env, Body.tokenTransfers[1].mint);
+		const swapping = first_token !== second_token;
+
+		const Timestamp = new Date(Body.timestamp * 1000).toLocaleString();
+		const author = Body.tokenTransfers[0].fromUserAccount;
+
+		if (author === "73W5Lh2jxuqevFyYTWRhdPZ9ZskScHKt2GLUiZU2qQcP") {
+		  const [Message, thread_id] = await this.transaction_info(env, authorMap, Body, "Add liquidity");
+		  await this.sendToTelegramTransfer(env, `${Message}\nTimestamp: ${Timestamp}`, thread_id);
+		} else if (author === "HLnpSz9h2S4hiLQ43rnSD9XkcUThA7B8hQMKmDaiTLcC") {
+		  const [Message, thread_id] = await this.transaction_info(env, authorMap, Body, "Withdraw liquidity");
+		  await this.sendToTelegramTransfer(env, `${Message}\nTimestamp: ${Timestamp}`, thread_id);
+		} else {
+		  console.log("Not in precedent condition");
+		}
+
+		return new Response("Logged POST request body.", { status: 200 });
+	  } else {
+		return new Response("Method not allowed.", { status: 405 });
+	  }
+
+	} else {
+	  return new Response("Only POST method is allowed.", { status: 405 });
+	}
+  },
+
+  async sendToTelegramTransfer(env: Env, message: string, thread: number): Promise<void> {
+	const telegramUrl = `https://api.telegram.org/bot${env.BOT_TOKEN}/sendMessage`;
+	const response = await fetch(telegramUrl, {
+	  method: "POST",
+	  headers: { "Content-Type": "application/json" },
+	  body: JSON.stringify({
+		chat_id: env.CHAT_ID,
+		text: message,
+		message_thread_id: thread,
+		parse_mode: "HTML",
+	  }),
+	});
+	const data = await response.json();
+	if (!response.ok) console.error("Failed to send message to Telegram:", data);
+  },
+
+  async pool_finding(env: Env, non_sol_token: string , wallet_address: string): Promise<string> {
+	const connection = new Connection(`https://mainnet.helius-rpc.com/?api-key=${env.API_KEY}`);
+	const cpAmm = new CpAmm(connection);
+	const userPublicKey = new PublicKey(wallet_address);
+	const userPositions = await cpAmm.getPositionsByUser(userPublicKey);
+
+	for (const pos of userPositions) {
+	  const pool_address = pos.positionState.pool;
+	  const poolState = await cpAmm.fetchPoolState(pool_address);
+
+	  if (poolState.tokenAMint.toString() === non_sol_token) {
+		return `https://www.meteora.ag/dammv2/${pool_address}`;
+	  }
+	}
+
+	return "Nothing Found";
+  },
+
+  async getTokenSymbol(env: Env, mintAddress: string): Promise<string> {
+	if (mintAddress === "So11111111111111111111111111111111111111112") {
+	  return "SOL";
+	}
+
+	const url = `https://mainnet.helius-rpc.com/?api-key=${env.API_KEY}`;
+	const payload = {
+	  id: 1,
+	  jsonrpc: "2.0",
+	  method: "getAsset",
+	  params: [mintAddress],
+	};
+
+	const response = await fetch(url, {
+	  method: "POST",
+	  headers: { accept: "application/json", "content-type": "application/json" },
+	  body: JSON.stringify(payload),
+	});
+
+	const data = await response.json();
+	return data.result.content.metadata.symbol;
+  },
+
+  async getJupiterLink(inputMint: string, outputMint: string): Promise<string> {
+	return `https://jup.ag/swap/${inputMint}-${outputMint}`;
+  },
+
+  async getGMGNLink(mint: string): Promise<string> {
+	return `https://gmgn.ai/sol/token/${mint}`;
+  },
+
+  async get_price(token_address: string): Promise<number> {
+	const response = await fetch(`https://api.dexscreener.com/latest/dex/tokens/${token_address}`);
+	const data = await response.json();
+	return data.pairs[0].priceUsd;
+  },
+
+  async transaction_info(env: Env, authorMap: AuthorMap, body: BodyType, status: string): Promise<[string, number]> {
+	const author = body.feePayer;
+	let not_sol: string | null = null;
+
+	const list_tokens: ListTokens = {};
+
+	for (const token of body.tokenTransfers) {
+	  if (token.mint !== "So11111111111111111111111111111111111111112") {
+		not_sol = token.mint;
+	  }
+
+	  if (!list_tokens[token.mint]) {
+		list_tokens[token.mint] = { amount: token.tokenAmount, price: null, size: null, ticker: null };
+	  } else {
+		list_tokens[token.mint].amount += token.tokenAmount;
+	  }
+	}
+
+	const link = await this.pool_finding(env, not_sol!, "73W5Lh2jxuqevFyYTWRhdPZ9ZskScHKt2GLUiZU2qQcP");
+
+	let size_order = 0;
+	for (const token of Object.keys(list_tokens)) {
+	  list_tokens[token].ticker = await this.getTokenSymbol(env, token);
+	  list_tokens[token].price = await this.get_price(token);
+	  const size = (list_tokens[token].price ?? 0) * list_tokens[token].amount;
+	  list_tokens[token].size = size;
+	  size_order += size;
+	}
+
+	const { name, threadId } = authorMap[author];
+	const tokenList = Object.values(list_tokens).map((entry) => entry.ticker).join(", ");
+	const juplink = await this.getJupiterLink("SOL", not_sol!);
+	const gmgnlink = await this.getGMGNLink(not_sol!);
+
+	let message = "";
+	if (status === "Add liquidity") {
+	  message = `Nouveau DAMM ${Math.round(size_order * 10) / 10}: <strong>\n${tokenList}</strong> \n<a href="${gmgnlink}">GMGN</a> / <a href="${juplink}">Jupiter</a> / <a href="${link}">Meteora</a>`;
+	} else if (status === "Withdraw liquidity") {
+	  message = `Fin DAMM ${Math.round(size_order * 10) / 10}: <strong>\n${tokenList}</strong> \n<a href="${gmgnlink}">GMGN</a> / <a href="${juplink}">Jupiter</a> / <a href="${link}">Meteora</a>`;
+	}
+
+	return [message, threadId];
+  },
+};
+
+export default src_default;
