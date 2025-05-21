@@ -25,10 +25,15 @@ type TokenTransfer = {
   tokenAmount: number;
 };
 
+type Instructions = {
+	accounts : string;
+};
+
 type BodyType = {
   feePayer: string;
   type: string;
   tokenTransfers: TokenTransfer[];
+  instructions : Instructions[];
   timestamp: number;
 };
 
@@ -67,10 +72,11 @@ const src_default = {
 		'FtjtJVQRTbH7fTf9eXSL8NHo4qfj4jcNxjM4JniTDUSi': { name: "DAMM copy", threadId: 2, amount: 0 },
 	  };
 
+	  const transfer = Body.tokenTransfers[0];
 	  const isTargeted = authorMap[Body.feePayer] &&
 		(Body.type === "TRANSFER" || Body.type === "UNKNOWN") &&
-		(Body.tokenTransfers[0].fromUserAccount === "HLnpSz9h2S4hiLQ43rnSD9XkcUThA7B8hQMKmDaiTLcC" ||
-		  Body.tokenTransfers[0].toUserAccount === "HLnpSz9h2S4hiLQ43rnSD9XkcUThA7B8hQMKmDaiTLcC");
+		(transfer.fromUserAccount == "HLnpSz9h2S4hiLQ43rnSD9XkcUThA7B8hQMKmDaiTLcC" ||
+		  transfer.toUserAccount == "HLnpSz9h2S4hiLQ43rnSD9XkcUThA7B8hQMKmDaiTLcC");
 
 	  if (isTargeted) {
 		console.log("Received POST request with body:", Body);
@@ -102,6 +108,7 @@ const src_default = {
 	}
   },
 
+  //Send the whole message to the telegram API to post it
   async sendToTelegramTransfer(env: Env, message: string, thread: number): Promise<void> {
 	const telegramUrl = `https://api.telegram.org/bot${env.BOT_TOKEN}/sendMessage`;
 	const response = await fetch(telegramUrl, {
@@ -118,7 +125,9 @@ const src_default = {
 	if (!response.ok) console.error("Failed to send message to Telegram:", data);
   },
 
-  async pool_finding(env: Env, non_sol_token: string , wallet_address: string): Promise<string> {
+  //Identify the pool corresponding to 
+  async pool_finding(pool : string, env: Env, non_sol_token: string , wallet_address: string): Promise<string> {
+	console.log(`https://www.meteora.ag/dammv2/${pool}`);
 	const connection = new Connection(`https://mainnet.helius-rpc.com/?api-key=${env.API_KEY}`);
 	const cpAmm = new CpAmm(connection);
 	const userPublicKey = new PublicKey(wallet_address);
@@ -221,7 +230,7 @@ const src_default = {
 	  }
 	}
 
-	const link = await this.pool_finding(env, not_sol!, "FtjtJVQRTbH7fTf9eXSL8NHo4qfj4jcNxjM4JniTDUSi");
+	const link = await this.pool_finding(body.instructions[1].accounts[1], env, not_sol!, "FtjtJVQRTbH7fTf9eXSL8NHo4qfj4jcNxjM4JniTDUSi")
 	console.log(`Link : ${link}`);
 
 	let size_order = 0;
@@ -245,7 +254,7 @@ const src_default = {
 
 	let message = "";
 	if (status === "Add liquidity") {
-	  message = `Nouveau DAMM ${size_order} sur ${value} (${pourcent_value}%) : \nSol size : ${list_tokens["So11111111111111111111111111111111111111112"].size} <strong>\n${tokenList}</strong> \n<a href="${gmgnlink}">GMGN</a> / <a href="${juplink}">Jupiter</a> / <a href="${link}">Meteora</a>`;
+	  message = `Nouveau DAMM ${size_order} sur ${value} (${pourcent_value}%) : \nSol size : ${list_tokens["So11111111111111111111111111111111111111112"].amount} <strong>\n${tokenList}</strong> \n<a href="${gmgnlink}">GMGN</a> / <a href="${juplink}">Jupiter</a> / <a href="${link}">Meteora</a>`;
 	} else if (status === "Withdraw liquidity") {
 	  message = `Fin DAMM ${size_order} sur ${value} (${pourcent_value}%) : <strong>\n${tokenList}</strong> \n<a href="${gmgnlink}">GMGN</a> / <a href="${juplink}">Jupiter</a> / <a href="${link}">Meteora</a>`;
 	}
