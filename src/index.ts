@@ -44,9 +44,9 @@ type ListTokens = Record<
   string,
   {
 	amount: number;
-	price: number | null;
-	size: number | null;
-	ticker: string | null;
+	price: number;
+	size: number;
+	ticker: string;
   }
 >;
 
@@ -64,7 +64,7 @@ const src_default = {
 		'GicMHZkMDxgpNt6EoW9ADd9ovEwQ7ZGooRWLxm2sTUFL': { name: "Follow scammeur 4", threadId: 748, amount: 0 },
 		'9xtNwPBdjM8WWmotpkUscwMwWqspggduKvAsHRiYpdkN': { name: "Scammeur 5", threadId: 750, amount: 0 },
 		'CRBYGyfcRSiwcpUr4qxbVeR7MDNb32mkhxxzFAN7iinS': { name: "Scammeur 3", threadId: 752, amount: 0 },
-		'73W5Lh2jxuqevFyYTWRhdPZ9ZskScHKt2GLUiZU2qQcP': { name: "DAMM copy", threadId: 2, amount: 0 },
+		'FtjtJVQRTbH7fTf9eXSL8NHo4qfj4jcNxjM4JniTDUSi': { name: "DAMM copy", threadId: 2, amount: 0 },
 	  };
 
 	  const isTargeted = authorMap[Body.feePayer] &&
@@ -82,7 +82,7 @@ const src_default = {
 		const Timestamp = new Date(Body.timestamp * 1000).toLocaleString();
 		const author = Body.tokenTransfers[0].fromUserAccount;
 
-		if (author === "73W5Lh2jxuqevFyYTWRhdPZ9ZskScHKt2GLUiZU2qQcP") {
+		if (author === "FtjtJVQRTbH7fTf9eXSL8NHo4qfj4jcNxjM4JniTDUSi") {
 		  const [Message, thread_id] = await this.transaction_info(env, authorMap, Body, "Add liquidity");
 		  await this.sendToTelegramTransfer(env, `${Message}\nTimestamp: ${Timestamp}`, thread_id);
 		} else if (author === "HLnpSz9h2S4hiLQ43rnSD9XkcUThA7B8hQMKmDaiTLcC") {
@@ -129,6 +129,7 @@ const src_default = {
 	  const poolState = await cpAmm.fetchPoolState(pool_address);
 
 	  if (poolState.tokenAMint.toString() === non_sol_token) {
+		console.log(`Meteora : https://www.meteora.ag/dammv2/${pool_address}`)
 		return `https://www.meteora.ag/dammv2/${pool_address}`;
 	  }
 	}
@@ -163,14 +164,43 @@ const src_default = {
 	return `https://jup.ag/swap/${inputMint}-${outputMint}`;
   },
 
+  //Just construct the 
   async getGMGNLink(mint: string): Promise<string> {
 	return `https://gmgn.ai/sol/token/${mint}`;
   },
 
+  //Get the price of specified token by using Dexscreener API
   async get_price(token_address: string): Promise<number> {
 	const response = await fetch(`https://api.dexscreener.com/latest/dex/tokens/${token_address}`);
 	const data = await response.json();
 	return data.pairs[0].priceUsd;
+  },
+
+  //Calculate the wallet value
+  async wallet_value(env : Env, sol_val : number) {
+    const options = {
+    	method: 'POST',
+    	headers: {'Content-Type': 'application/json'},
+    	body: '{"jsonrpc":"2.0","id":"1","method":"getBalance","params":["FtjtJVQRTbH7fTf9eXSL8NHo4qfj4jcNxjM4JniTDUSi"]}'
+  	};
+
+  try {
+  const res = await fetch(`https://mainnet.helius-rpc.com/?api-key=${env.API_KEY}`, options)
+  const res_proper = await res.json() as {
+	  result: {
+      	value: string;
+  	  	};
+	};
+
+  const lamport_val = Number(BigInt(res_proper.result.value))/ Number(BigInt(1000000000));
+
+  const wallet_value = sol_val * lamport_val;
+  return wallet_value;
+  }
+
+  catch(err){
+  	console.error(err);
+  	}
   },
 
   async transaction_info(env: Env, authorMap: AuthorMap, body: BodyType, status: string): Promise<[string, number]> {
@@ -185,13 +215,14 @@ const src_default = {
 	  }
 
 	  if (!list_tokens[token.mint]) {
-		list_tokens[token.mint] = { amount: token.tokenAmount, price: null, size: null, ticker: null };
+		list_tokens[token.mint] = { amount: token.tokenAmount, price: 0, size: 0, ticker: ""};
 	  } else {
 		list_tokens[token.mint].amount += token.tokenAmount;
 	  }
 	}
 
-	const link = await this.pool_finding(env, not_sol!, "73W5Lh2jxuqevFyYTWRhdPZ9ZskScHKt2GLUiZU2qQcP");
+	const link = await this.pool_finding(env, not_sol!, "FtjtJVQRTbH7fTf9eXSL8NHo4qfj4jcNxjM4JniTDUSi");
+	console.log(`Link : ${link}`);
 
 	let size_order = 0;
 	for (const token of Object.keys(list_tokens)) {
@@ -201,17 +232,22 @@ const src_default = {
 	  list_tokens[token].size = size;
 	  size_order += size;
 	}
+	size_order = Math.round(size_order * 10) / 10;
 
 	const { name, threadId } = authorMap[author];
 	const tokenList = Object.values(list_tokens).map((entry) => entry.ticker).join(", ");
 	const juplink = await this.getJupiterLink("SOL", not_sol!);
 	const gmgnlink = await this.getGMGNLink(not_sol!);
+	let value = await this.wallet_value(env, list_tokens["So11111111111111111111111111111111111111112"].price);
+	value = Math.round(value! * 10) / 10;
+
+	const pourcent_value = Math.round((size_order/value)*100) / 100;
 
 	let message = "";
 	if (status === "Add liquidity") {
-	  message = `Nouveau DAMM ${Math.round(size_order * 10) / 10}: <strong>\n${tokenList}</strong> \n<a href="${gmgnlink}">GMGN</a> / <a href="${juplink}">Jupiter</a> / <a href="${link}">Meteora</a>`;
+	  message = `Nouveau DAMM ${size_order} sur ${value} (${pourcent_value}%) : \nSol size : ${list_tokens["So11111111111111111111111111111111111111112"].size} <strong>\n${tokenList}</strong> \n<a href="${gmgnlink}">GMGN</a> / <a href="${juplink}">Jupiter</a> / <a href="${link}">Meteora</a>`;
 	} else if (status === "Withdraw liquidity") {
-	  message = `Fin DAMM ${Math.round(size_order * 10) / 10}: <strong>\n${tokenList}</strong> \n<a href="${gmgnlink}">GMGN</a> / <a href="${juplink}">Jupiter</a> / <a href="${link}">Meteora</a>`;
+	  message = `Fin DAMM ${size_order} sur ${value} (${pourcent_value}%) : <strong>\n${tokenList}</strong> \n<a href="${gmgnlink}">GMGN</a> / <a href="${juplink}">Jupiter</a> / <a href="${link}">Meteora</a>`;
 	}
 
 	return [message, threadId];
