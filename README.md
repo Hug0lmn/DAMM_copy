@@ -1,16 +1,63 @@
-# 🛑 Project Status
-The project is ongoing and actually in use so I will keep managing it until I found no more use for it.
+# 📊 Project: DAMM_COPY_TRADER
 
-# 📌 Project Overview
-The goal of this project is to track and notify me about specific actions realized by an ensemble of crypto wallet that I watch. The specific actions are adding liquidity or withdrawing liquidity from a Meteora DAMM Pool because I think there is certainly a little bit of edge concerning that these product is really recent and observing profitable wallet can maybe lead to profitability.
+## 📄 Purpose
 
-Next step is adding maybe some automation around copy trading but I need first to figure out how to use Meteora DLMM API and Solana API.
+This repository contains my implementation of a copy trading system for **Meteora's DAMM v2 liquidity pools** on Solana.
 
-# ⚙️ Technologies Used
-To monitor and analyze wallet activity, the project relied on the following services:
+## 🧠 Background
 
-- Cloudflare Workers – to handle incoming webhook requests
+I started this project after noticing the emergence of a new type of liquidity pool on Meteora: **DAMM v2**. While several closed-source or paid copy trading bots already exist for DLMM pools, I wanted to explore whether a similar approach would be viable for DAMM pools.
 
-- Helius – for blockchain webhooks and RPC access
+So far, it appears that copy trading with DAMM is **not inherently profitable**, mainly because copied wallets often behave differently across DLMM and DAMM due to differing incentive structures.
 
-- Telegram API – for sending real-time alerts
+## 🏗️ Architecture Overview
+
+This project originally began as a fork of another repository — a **Telegram bot** using a **Cloudflare Worker** to track wallet transactions on Solana. However, due to Cloudflare's limited execution time (which made it hard to automate NFT minting, liquidity management, etc.), I split the code into two components:
+
+- A **Cloudflare Worker**: Responsible for transaction monitoring and forwarding data to Supabase.
+- A **Local Worker**: Runs continuously on a server or local machine to manage trading logic and interact with Meteora.
+
+---
+
+## 🔁 Workflow
+
+1. The **Cloudflare Worker** receives Solana transaction webhooks from Helius, filters for DAMM-related transactions, parses them, and stores relevant data in a **Supabase** database.
+2. The **Local Worker** subscribes to Supabase Realtime to detect new entries:
+   - If the transaction adds liquidity:
+     - Swap a portion of $SOL to the target token.
+     - Mint the necessary NFT.
+     - Add liquidity to the same pool as the target wallet.
+   - If it withdraws liquidity:
+     - Withdraw the position from the pool.
+     - Swap back tokens to $SOL.
+     - If there's no open position but the token exists in the wallet, still swap it back.
+3. A **Telegram bot** sends you updates on each action performed.
+
+---
+
+## Prerequisites
+
+- A [Helius](https://www.helius.xyz/) account to set up a webhook.
+- A [Supabase](https://supabase.com/) instance.
+- A Telegram bot token and chat ID (optional, for notifications).
+- A `.env` file configured properly (see `.env.example`).
+
+## 🔧 Planned Improvements
+There are several areas for enhancement:
+
+ - Improve copy-trade logic to handle partial withdrawals from target wallets (currently assumes full withdrawal).
+
+ - Improve error handling and retry mechanisms.
+
+ - Add unit tests and basic CI/CD pipeline.
+
+ - Create a dashboard for visualizing copied trades and pool performance.
+
+## ❗ Challenges Faced
+One of the biggest difficulties was working with the Meteora DAMM v2 SDK. At the time of development:
+
+The documentation was incomplete or outdated.
+
+Several functions had incorrect or missing parameter definitions.
+
+I had to dive into the SDK's source code to understand proper usage.

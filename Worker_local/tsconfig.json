@@ -1,0 +1,20 @@
+{
+  "compilerOptions": {
+    "target": "ES2020",                   // Modern JS target
+    "module": "commonjs",                 // Node.js module system
+    "moduleResolution": "node",           // Resolve modules like Node.js
+    "esModuleInterop": true,               // Enable import interoperability
+    "forceConsistentCasingInFileNames": true,
+    "strict": true,                        // Enable strict type checking
+    "skipLibCheck": true,                  // Skip checking declaration files
+    "outDir": "./dist",                    // Compiled JS output folder
+    "types": ["node"]                      // Include Node.js types globally
+  },
+  "include": [
+    "**/*"                                // Include all files under this root folder and subfolders
+  ],
+  "exclude": [
+    "node_modules",
+    "dist"
+  ]
+}

@@ -1,0 +1,19 @@
+{
+  "name": "cloudflare",
+  "version": "1.0.0",
+  "description": "Provide valuable function",
+  "main": "cloudflare_worker.ts",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "@meteora-ag/cp-amm-sdk": "^1.0.6",
+    "@solana/web3.js": "^1.98.2",
+    "@supabase/supabase-js": "^2.49.8",
+    "bs58": "^6.0.0",
+    "cross-fetch": "^4.1.0",
+    "dotenv": "^16.5.0"
+  }
+}
