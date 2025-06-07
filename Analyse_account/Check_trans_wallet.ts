@@ -25,9 +25,9 @@ async function main(){
     const global_map = new Map();
     const sol_key = "So11111111111111111111111111111111111111112";
 
-    let compteur = 100;
+    let compteur = 0;
     while (compteur < data.processedSignatures.length){
-        const transactions = await fetchTransaction(data.processedSignatures.slice(compteur-100,compteur));
+        const transactions = await fetchTransaction(data.processedSignatures.slice(compteur,compteur+100));
         compteur += 100;
     
         for (const transaction of transactions){
