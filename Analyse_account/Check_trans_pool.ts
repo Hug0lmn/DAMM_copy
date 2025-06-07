@@ -6,111 +6,76 @@ function delay(ms: number) {
   return new Promise(resolve => setTimeout(resolve, ms));
 }
 
-async function fetchTransaction(signature : string) {
-const res = await fetch(`https://rpc.helius.xyz/?api-key=${process.env.API_KEY}`, {
+async function fetchTransaction(signatures : Array<string>) {
+const res = await fetch(`https://api.helius.xyz/v0/transactions?api-key=${process.env.API_KEY}`, {
   method: 'POST',
   headers: {'Content-Type': 'application/json'},
   body: JSON.stringify({
-    jsonrpc : "2.0",
-    id:"1",
-    method:"getTransaction",
-    params: [signature] 
+    transactions: signatures
   })
 });
 
   const json = await res.json();
   return json
-}
+};
 
 async function main(){
-    const raw = fs.readFileSync("progress.json", 'utf-8');
+    const raw = fs.readFileSync("pool_transac.json", 'utf-8');
     const data = JSON.parse(raw);
-    const new_map = new Map();
+    const global_map = new Map();
+    const sol_key = "So11111111111111111111111111111111111111112";
+
     let compteur = 0;
-
-    for (const sign of data.processedSignatures){
-        const transac = await fetchTransaction(sign);
-        compteur++;
+    while (compteur < data.processedSignatures.length){
+        const transactions = await fetchTransaction(data.processedSignatures.slice(compteur,compteur+100));
+        compteur += 100;
     
-        if (!(transac.error)){
-            //Check if the transaction is an interaction with a pool Meteora
+        for (const transaction of transactions){
+            const adding = transaction.tokenTransfers.some(tokenTransfers => tokenTransfers.toUserAccount === "HLnpSz9h2S4hiLQ43rnSD9XkcUThA7B8hQMKmDaiTLcC");
+            const withdraw = transaction.tokenTransfers.some(tokenTransfers => tokenTransfers.fromUserAccount === "HLnpSz9h2S4hiLQ43rnSD9XkcUThA7B8hQMKmDaiTLcC");
 
-            const accountKeys = transac.result.transaction.message.accountKeys;
-            const nft_address = "TokenzQdBNbLqP5VEhdkAS6EPFLC1PHnBqCXEpPxuEb";//Origin adress for minting the Meteora NFT
-            const pool_address = "HLnpSz9h2S4hiLQ43rnSD9XkcUThA7B8hQMKmDaiTLcC";//Origin adress for creating new DAMM pool
+            const new_map = new Map();
 
-            const interactWithPool = accountKeys.includes(pool_address);
-            const interactWithNFT = accountKeys.includes(nft_address);
-            const isRelevant = interactWithPool && interactWithNFT;
-
-            //This section serve as recolting the amount of token send or received during the transaction
-            const info = new Map();
-
-            if (isRelevant){
-                console.log(sign);
-                for (const balance of transac.result.meta.postTokenBalances){
-                    if (balance.owner == pool_address){
-                        info.set(balance.mint, [
-                            balance.owner, 
-                            balance.programId,
-                            balance.uiTokenAmount.uiAmount, 
-                            balance.uiTokenAmount.decimals]);
-                    }
-                }
-
-                for (const balance of transac.result.meta.preTokenBalances){
-                    if (balance.owner == pool_address){
-                        if (info.has(balance.mint)){//If the keys exist then modify the amount of token to know the number of token withdraw or add
-            
-                            const value = info.get(balance.mint);
-                            value[2] = balance.uiTokenAmount.uiAmount - value[2];
-                            info.set(balance.mint, value);
-
-                        }
-                    else {//When the wallet add liquidity if it the first wallet to add liquidity then 
-                        info.set(balance.mint, [
-                            balance.mint, 
-                            balance.programId,
-                            -balance.uiTokenAmount.uiAmount, 
-                            balance.uiTokenAmount.decimals]);
-                        }
-                    }
-                }
-
-                const mini_array : number[] = [];
-                const sol_key = "So11111111111111111111111111111111111111112";
-
-                if (info.has(sol_key)) {
-                    mini_array.push(info.get(sol_key)[2]);
-                }
-
-                for (const [key, value] of info) {
-                    if (key !== sol_key) {
-                        mini_array.push(value[2]);
-                    }
-                }
-
-                if (new_map.has(transac.result.transaction.message.accountKeys[0])){//If a key already exist then calculate the number of tokens at the end
-                    const map_value = new_map.get(transac.result.transaction.message.accountKeys[0]);
-                        map_value[0] = map_value[0] + mini_array[0];
-                        map_value[1] = map_value[1] + mini_array[1];
-                        map_value[2] = map_value[2] + 1;//map_value[2] represent the number of time that the pool has a transaction (add/remove)
-                        new_map.set(transac.result.transaction.message.accountKeys[0], map_value)
-                    }
-                else {//If a key doesn't exist then create a new one  
-                    mini_array.push(1)
-                    const mapKey = transac.result.transaction.message.accountKeys[0];
-                    new_map.set(mapKey, mini_array);
+            if (withdraw && !adding){//Withdraw (Amount of the position and the fees are in different transfers)
+                for (const transfer of transaction.tokenTransfers){
+                    const previous_amount = new_map.get(transfer.mint) ?? 0;
+                    new_map.set(transfer.mint, transfer.tokenAmount+previous_amount)
                 }
             }
+            else if (!withdraw && adding){//Adding 
+                for (const transfer of transaction.tokenTransfers){
+                    new_map.set(transfer.mint, -transfer.tokenAmount)
+                }
+            }
+            else {
+                continue
+            }
+
+        //Ordonne les valeurs
+            const mini_array : number[] = [];
+
+            mini_array.push(new_map.get(sol_key) ?? 0)
+        
+            for (const [key, value] of new_map) {
+                if (key !== sol_key) {
+                    mini_array.push(value) ?? 0;
+                    }
+                }
+
+            if (global_map.has(transaction.feePayer)){//If a key already exist then calculate the number of tokens at the end
+                const map_value = global_map.get(transaction.feePayer);
+                map_value[0] = map_value[0] + mini_array[0];
+                map_value[1] = map_value[1] + mini_array[1];
+                map_value[2] = map_value[2] + 1;//map_value[2] represent the number of time that the pool has a transaction (add/remove)
+                global_map.set(transaction.feePayer, map_value)
+            } else {//If a key doesn't exist then create a new one  
+                mini_array.push(1)
+                global_map.set(transaction.feePayer, mini_array);
+            }
         }
-
-        if (compteur%10 ===0){
-            console.log(compteur)}
-        await delay(125);
-        console.log('Mapped values:', new_map);
     }
-    fs.writeFileSync("output.json", JSON.stringify(Array.from(new_map.entries())));
-}
-
+    await delay(50);
+    fs.writeFileSync("output_pool.json", JSON.stringify(Array.from(global_map.entries())));
+    console.log('Mapped values:', global_map);
+};
 main()
