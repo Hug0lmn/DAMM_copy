@@ -34,34 +34,32 @@ async function main(){
             const adding = transaction.tokenTransfers.some(tokenTransfers => tokenTransfers.toUserAccount === "HLnpSz9h2S4hiLQ43rnSD9XkcUThA7B8hQMKmDaiTLcC");
             const withdraw = transaction.tokenTransfers.some(tokenTransfers => tokenTransfers.fromUserAccount === "HLnpSz9h2S4hiLQ43rnSD9XkcUThA7B8hQMKmDaiTLcC");
 
-            const new_map = new Map();
+            let sol_token = 0;
+            let other_token = 0;
 
             if (withdraw && !adding){//Withdraw (Amount of the position and the fees are in different transfers)
                 for (const transfer of transaction.tokenTransfers){
-                    const previous_amount = new_map.get(transfer.mint) ?? 0;
-                    new_map.set(transfer.mint, transfer.tokenAmount+previous_amount)
+                    if (transfer.mint === sol_key)
+                        sol_token += transfer.tokenAmount;
+                    else if (transfer.mint !== sol_key)
+                        other_token += transfer.tokenAmount;
                 }
             }
             else if (!withdraw && adding){//Adding 
                 for (const transfer of transaction.tokenTransfers){
-                    new_map.set(transfer.mint, -transfer.tokenAmount)
+                    if (transfer.mint === sol_key)
+                        sol_token += -transfer.tokenAmount;
+                    else if (transfer.mint !== sol_key)
+                        other_token += -transfer.tokenAmount;
                 }
             }
             else {
                 continue
             }
 
-        //Ordonne les valeurs
             const mini_array : number[] = [];
-
-            mini_array.push(new_map.get(sol_key) ?? 0)
+            mini_array.push(sol_token, other_token);
         
-            for (const [key, value] of new_map) {
-                if (key !== sol_key) {
-                    mini_array.push(value) ?? 0;
-                    }
-                }
-
             if (global_map.has(transaction.feePayer)){//If a key already exist then calculate the number of tokens at the end
                 const map_value = global_map.get(transaction.feePayer);
                 map_value[0] = map_value[0] + mini_array[0];
