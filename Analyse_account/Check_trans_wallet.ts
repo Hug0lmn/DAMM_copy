@@ -73,12 +73,12 @@ function pool_parsing(transaction, sol_key, pool_map : Map <string, Array<number
         for (const transfer of transaction.tokenTransfers){
             if (transfer.mint === sol_key)
                 sol_token += transfer.tokenAmount;
-            else if (transfer.mint !== sol_key){
-                other_token += transfer.tokenAmount;
-                not_sol_address = transfer.mint;
+                else if (transfer.mint !== sol_key){
+                    other_token += transfer.tokenAmount;
+                    not_sol_address = transfer.mint;
+                }
             }
         }
-    }
         
     else if (!withdraw && adding){//Adding 
         for (const transfer of transaction.tokenTransfers){
@@ -117,25 +117,48 @@ async function main(){
     const pool_map = new Map();
     const swap_map = new Map();
 
-    let compteur = 100;
+    //Parsing total
+    let compteur = 0;
     while (compteur < data.processedSignatures.length){
-        const transactions = await fetchTransaction(data.processedSignatures.slice(compteur-100,compteur));
+        const transactions = await fetchTransaction(data.processedSignatures.slice(compteur,compteur+100));
         compteur += 100;
     
         for (const transaction of transactions){
             const fee_payer = transaction.feePayer;
 
-            //transaction_type === "SWAP" represent swapping
-            if (transaction.type === "SWAP")
-                swapping_parsing(transaction, fee_payer, sol_key, swap_map);
-            //transaction_type === "UNKNOWN" for withdrawal and "TRANSFER" for adding
-            else
-                pool_parsing(transaction, sol_key, pool_map);    
+            if (transaction.transactionError === null){
+                //transaction_type === "SWAP" represent swapping
+                //A small number of transactions are considered as "TRANSFER" but for evident reason, adding this will need a huge change in the code parsing to exclude transfer in a lower instance
+                if (transaction.type === "SWAP")
+                    swapping_parsing(transaction, fee_payer, sol_key, swap_map);
+                //transaction_type === "UNKNOWN" for withdrawal and "TRANSFER" for adding
+                else
+                    pool_parsing(transaction, sol_key, pool_map);    
+            }
         }
     await delay(50);
     }
-    fs.writeFileSync("output_wallet.json", JSON.stringify(Array.from(pool_map.entries())));
-    console.log('Mapped values:', pool_map);
-    console.log("Swap_values :", swap_map)
+
+    //Regroup swap and pool
+    const final_map = new Map;
+    for (const key of pool_map.keys()){
+        const pool_amount = pool_map.get(key) || [0,0];
+        const swap_amount = swap_map.get(key);
+//        console.log(key, pool_amount, swap_amount);
+
+        if (swap_amount !== undefined){
+            const mini_array: number[] = [
+                pool_amount[0] + swap_amount[0]
+            ];
+            final_map.set(key, mini_array);
+        };
+    }
+
+//    fs.writeFileSync("pool_map.json", JSON.stringify(Array.from(pool_map.entries())));
+//    fs.writeFileSync("swap_map.json", JSON.stringify(Array.from(swap_map.entries())));
+//    console.log('Mapped values:', pool_map);
+//    console.log("Swap_values :", swap_map);
+    console.log("Final_map :", final_map);
+    fs.writeFileSync("final_map.json", JSON.stringify(Array.from(final_map.entries())));
 }
 main();
