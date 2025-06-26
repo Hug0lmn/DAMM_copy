@@ -4,9 +4,15 @@
 This folder contains code related to the collection and analysis of pools and wallets in order to identify profitable wallets based on their transactions through Meteora DAMM v2 — with the potential goal of copying their transactions.
 
 ## 🔄 Next Improvements
-Currently, the results of these scripts require manual evaluation to determine profitability (in the latest version). I haven't taken the time (nor seen a strong advantage) in calculating the SOL value of each traded token. While this is feasible, it would add unnecessary complexity for my current goals.
 
-However, I may add a parameter to inspect each signature starting from the oldest one (useful mainly for pool analysis).
+- **Enhance `Check_trans_pool.ts`**  
+  Update the `Check_trans_pool.ts` file to calculate and display profitability, using a similar method as implemented in `Check_trans_wallet.ts`.
+
+- **Add Wallet Activity Visualization**  
+  Create a new module or script dedicated to visualizing wallet activity. This should include charts or summaries of transaction patterns, volume, and any other insightful metrics.
+
+- **Implement Date-Based Filtering**  
+  Introduce an option to filter wallet transactions or signatures based on a specified date range. This will allow for more targeted analysis over specific time periods.
 
 ## 📦 Contents
 - `Get_transac.ts` – Retrieves a list of transactions for a specific address (pool or wallet).
@@ -14,7 +20,7 @@ However, I may add a parameter to inspect each signature starting from the oldes
 - `Check_trans_wallet.ts` – Analyzes liquidity interactions for a specific wallet and evaluates their profitability across pools.
 
 ## 🧪 How to Use
-First, run `Get_transac.ts` with a specific address — this can be a DAMM v2 liquidity pool or a wallet address.
+First, run `Get_transac.ts` with a specific address and a specific number of max transactions — this can be a DAMM v2 liquidity pool or a wallet address.
 
 Depending on what you want to analyze:
 - **Liquidity Pool:** Run `Check_trans_pool.ts`

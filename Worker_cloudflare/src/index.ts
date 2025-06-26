@@ -56,7 +56,7 @@ const src_default = {
 	  const requestBody: BodyType[] = await request.json();
 	  const Body = requestBody[0];
 
-	  const wallet_ad = "73W5Lh2jxuqevFyYTWRhdPZ9ZskScHKt2GLUiZU2qQcP";
+	  const wallet_ad = "FtjtJVQRTbH7fTf9eXSL8NHo4qfj4jcNxjM4JniTDUSi";
 
 	  const authorMap: AuthorMap = {
 		'DbSjRwKCtxGu4XTfbfQLYHRviCPDoCiTtEGE9sQP7iHY': { name: "Scammeur 2", threadId: 2, amount: 0 },

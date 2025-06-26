@@ -68,8 +68,11 @@ function pool_parsing(transaction, sol_key, pool_map : Map <string, Array<number
     let sol_token = 0;
     let other_token = 0;
     let not_sol_address = "";
+    let timestamp = 0;
 
     if (withdraw && !adding){//Withdraw (Amount of the position and the fees are in different transfers)
+        timestamp = transaction.timestamp;
+
         for (const transfer of transaction.tokenTransfers){
             if (transfer.mint === sol_key)
                 sol_token += transfer.tokenAmount;
@@ -81,6 +84,8 @@ function pool_parsing(transaction, sol_key, pool_map : Map <string, Array<number
         }
         
     else if (!withdraw && adding){//Adding 
+        timestamp = transaction.timestamp;
+        
         for (const transfer of transaction.tokenTransfers){
             if (transfer.mint === sol_key)
                 sol_token += -transfer.tokenAmount;
@@ -94,25 +99,24 @@ function pool_parsing(transaction, sol_key, pool_map : Map <string, Array<number
         return
     };
 
-    const mini_array : number[] = [];
-    mini_array.push(sol_token, other_token);
+    const mini_array : [number, number, number, number, number] = [sol_token, other_token, timestamp, 0, 1];
 
     if (pool_map.has(not_sol_address)){//If a key already exist then calculate the number of tokens at the end
         const map_value = pool_map.get(not_sol_address)!;
         map_value[0] += mini_array[0];
         map_value[1] += mini_array[1];
-        map_value[2] += 1;//map_value[2] represent the number of time that the pool has a transaction (add/remove)
-        pool_map.set(not_sol_address, map_value)
+        map_value[3] += mini_array[2];
+        map_value[4] += 1;//map_value[4] represent the number of time that the pool has a transaction (add/remove)
+        pool_map.set(not_sol_address, map_value);
     } else {//If a key doesn't exist then create a new one  
-        mini_array.push(1)
         pool_map.set(not_sol_address, mini_array);
     }
 };
 
 async function main(){
-    const raw = fs.readFileSync("progress_wallet.json", 'utf-8');
+    const raw = fs.readFileSync("sign_wallet.json", 'utf-8');
     const data = JSON.parse(raw);
-    const sol_key = "So11111111111111111111111111111111111111112";
+    const sol_key = "So11111111111111111111111111111111111111112";//Solana token adress
     
     const pool_map = new Map();
     const swap_map = new Map();
@@ -122,13 +126,17 @@ async function main(){
     while (compteur < data.processedSignatures.length){
         const transactions = await fetchTransaction(data.processedSignatures.slice(compteur,compteur+100));
         compteur += 100;
+        
+        if (compteur % 1000 == 0){
+            console.log(compteur)
+        }
     
         for (const transaction of transactions){
             const fee_payer = transaction.feePayer;
 
             if (transaction.transactionError === null){
                 //transaction_type === "SWAP" represent swapping
-                //A small number of transactions are considered as "TRANSFER" but for evident reason, adding this will need a huge change in the code parsing to exclude transfer in a lower instance
+                //A really small number of transactions are considered as "TRANSFER" but for evident reason, adding this will require a huge change in the code parsing to exclude transfer in a lower instance
                 if (transaction.type === "SWAP")
                     swapping_parsing(transaction, fee_payer, sol_key, swap_map);
                 //transaction_type === "UNKNOWN" for withdrawal and "TRANSFER" for adding
@@ -144,11 +152,12 @@ async function main(){
     for (const key of pool_map.keys()){
         const pool_amount = pool_map.get(key) || [0,0];
         const swap_amount = swap_map.get(key);
-//        console.log(key, pool_amount, swap_amount);
 
         if (swap_amount !== undefined){
             const mini_array: number[] = [
-                pool_amount[0] + swap_amount[0]
+                pool_amount[0] + swap_amount[0],
+                pool_amount[2],
+                pool_amount[3]
             ];
             final_map.set(key, mini_array);
         };
@@ -158,7 +167,26 @@ async function main(){
 //    fs.writeFileSync("swap_map.json", JSON.stringify(Array.from(swap_map.entries())));
 //    console.log('Mapped values:', pool_map);
 //    console.log("Swap_values :", swap_map);
-    console.log("Final_map :", final_map);
+//    console.log("Final_map :", final_map);
+    
+    //Final result of the analysis and saving of transactions
+    let profit = 0;
+    let nb_pos = 0;
+    let winrate = 0; 
+    
+    for (const value of final_map.values()){
+        profit += value[0];
+        nb_pos += 1;
+
+        if (value[0] > 0){
+            winrate += 1;
+        }
+    }
+
+    winrate = winrate/nb_pos;
+    const average = profit/nb_pos;
+
+    console.log(`This wallet has a total profit of ${profit} SOL \nNumber of positions : ${nb_pos}\nWinrate : ${Math.round(winrate*1000)/10}%\nAverage win : ${Math.round(average*10000)/10000} SOL`);
     fs.writeFileSync("final_map.json", JSON.stringify(Array.from(final_map.entries())));
 }
 main();

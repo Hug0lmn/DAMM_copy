@@ -21,7 +21,7 @@ const channelA = supabase
 
       if (status == "Add_liquidity") {
           console.log("Add_liquidity");
-          const amount = 60_000_000; //0.06 SOL  1SOL : 1_000_000_000
+          const amount = 10_000_000; //0.01 SOL  1SOL : 1_000_000_000
           const [Message] = await transaction_info(process.env, tokentransfers, "Add liquidity", amount, wallet_address);
           await sendToTelegramTransfer(process.env, `${Message}\nTimestamp: ${Timestamp_}`, thread_id);
         }

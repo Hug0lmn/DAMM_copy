@@ -10,6 +10,8 @@ I started this project after noticing the emergence of a new type of liquidity p
 
 So far, it appears that copy trading with DAMM is **not inherently profitable**, mainly because copied wallets often behave differently across DLMM and DAMM due to differing incentive structures.
 
+A new way to find early potential profitable wallet is by using the tool provided by [Hanyon Analytics](https://meteora2.hanyon.app/) which maybe will be a source of inspiration for future improvment about the analysis part. 
+
 ## 🏗️ Architecture Overview
 
 This project originally began as a fork of another repository — a **Telegram bot** using a **Cloudflare Worker** to track wallet transactions on Solana. However, due to Cloudflare's limited execution time (which made it hard to automate NFT minting, liquidity management, etc.), I split the code into two components:
@@ -40,7 +42,7 @@ This project originally began as a fork of another repository — a **Telegram b
 - A [Helius](https://www.helius.xyz/) account to set up a webhook.
 - A [Supabase](https://supabase.com/) instance.
 - A Telegram bot token and chat ID (optional, for notifications).
-- A `.env` file configured properly (see `.env.example`).
+- A `.env` file configured properly.
 
 ## 🔧 Planned Improvements
 There are several areas for enhancement:
