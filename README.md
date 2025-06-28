@@ -10,7 +10,14 @@ I started this project after noticing the emergence of a new type of liquidity p
 
 So far, it appears that copy trading with DAMM is **not inherently profitable**, mainly because copied wallets often behave differently across DLMM and DAMM due to differing incentive structures.
 
-A new way to find early potential profitable wallet is by using the tool provided by [Hanyon Analytics](https://meteora2.hanyon.app/) which maybe will be a source of inspiration for future improvment about the analysis part. 
+A new way to identify potentially profitable wallets is by using the tool provided by [Hanyon Analytics](https://meteora2.hanyon.app/) which could inspire future improvements about the analysis part of this project. 
+However, I am not sure whether Hanyon Analytics calculates only DAMM position performance or also includes swap profits, which my code does.
+
+As of today (28th June), the first DAMM copy trader has been made available by [Met Engine](https://www.metengine.xyz/), while [Sol Decoder](https://x.com/SOL_Decoder) currently has a product in closed beta.
+
+While these products are available, they take a small portion of your profit as a fee for their services (which is fair). However, I wanted to build a similar product "at home" without having to lose a part of my profit.
+
+I recognize that since the two products mentioned above already have mindshare in the DLMM copy trading space, my goal wasn't to replace or compete with them but rather to create a personal alternative.
 
 ## 🏗️ Architecture Overview
 
