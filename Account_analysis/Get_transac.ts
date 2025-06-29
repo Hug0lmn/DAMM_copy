@@ -2,35 +2,26 @@ import fs from 'fs';
 import fetch from 'node-fetch';
 import 'dotenv/config';
 
-const ADDRESS = 'GxasGPiSh3hRf2dW1KemcKv1Cdn7US1t5hBYbKcQNgwL';
-const PROGRESS_FILE = './sign_transac.json';
-const MAX_SIGNATURES = 2000; // change this limit if needed
+// === CONFIGURATION ===
+const POOL_ADDRESS = 'CesNpCCJCZupVD19tZgrYSHSjzCcj381qaqqtK86TDen';
+const PROGRESS_FILE = './sign_wallet.json';
+const MAX_SIGNATURES = 10000; // change this limit if needed
 
-interface Progress {
-  processedSignatures: Set<string>;
-  lastBefore: string | null;
-}
-
-let progress: Progress = {
-  processedSignatures: new Set<string>(),
-  lastBefore: null,
-};
-
+// === FETCH SIGNATURES ===
 const fetchSignatures = async (before: string | null) => {
   const body = {
     jsonrpc: '2.0',
     id: 1,
     method: 'getSignaturesForAddress',
     params: [
-      ADDRESS,
+      POOL_ADDRESS,
       {
-        limit: 1000, //Upper limit of transactions for one request
-        before: before || undefined,
+        limit: 1000, //Max limit is 1000 :[
+        before: before || undefined, //before prevent us from parallelizing our requests
       },
     ],
   };
   
-
   const res = await fetch(`https://rpc.helius.xyz/?api-key=${process.env.API_KEY}`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
@@ -41,51 +32,59 @@ const fetchSignatures = async (before: string | null) => {
   return json.result || [];
 };
 
+// === MAIN LOOP ===
 
 async function get_signatures(){
+
+  const progress = {
+    processedSignatures: new Set<string>(),
+    lastBefore: null,
+  };
 
   let keepGoing = true;
   let fetchedCount = 0;
 
   while (keepGoing) {
     try {
-        const signatures = await fetchSignatures(progress.lastBefore);
-        if (signatures.length === 0) break;
+      const signatures = await fetchSignatures(progress.lastBefore);
+      if (signatures.length === 0) break; //If no transactions is returned then stop the loop
+      
+      for (const sig of signatures) {
+        const signature = sig.signature;
 
-        for (const sig of signatures) {
-            const signature = sig.signature;
-
-            if (progress.processedSignatures.has(signature)) continue; //Continue will pass to the next loop
-
-                progress.processedSignatures.add(signature);
-                fetchedCount++;
-
-        if (fetchedCount >= MAX_SIGNATURES) {
-            keepGoing = false;
-            break;
+        if (progress.processedSignatures.has(signature)) {
+          continue
+        } else { //Continue pass to the next iteration of the loop
+        progress.processedSignatures.add(signature);
+        fetchedCount++;
         }
+      }
+    
+    progress.lastBefore = signatures[signatures.length - 1].signature; //Update the last transaction signature obtain
+
+    if (fetchedCount >= MAX_SIGNATURES) { //If our max is reach, stop the loop
+      keepGoing = false;
+      break;
+    } else if (fetchedCount % 10000 === 0){
+      console.log(`Fetched so far: ${fetchedCount}`)
     }
 
-        progress.lastBefore = signatures[signatures.length - 1].signature;
-
-  //Save for each loop (in case of a crash)
-        fs.writeFileSync(
-            PROGRESS_FILE,
-            JSON.stringify({
-                processedSignatures: Array.from(progress.processedSignatures),
-                lastBefore: progress.lastBefore,
-            }, null, 2)
-        );
-
-        console.log(`Progress saved. Fetched so far: ${fetchedCount}`);
-        await new Promise(r => setTimeout(r, 200));
-        } catch (error) {
-            console.error("Erreur lors de la récupération des signatures :", error);
-            console.log("Pause de 5 secondes avant retry...");
-            await new Promise(r => setTimeout(r, 5000)); // pause plus longue en cas d'erreur
-        }
+    } catch (error) {
+      console.error("Error during transaction fetching :", error);
+      console.log("1 second break before retry...");
+      await new Promise(r => setTimeout(r, 1000)); 
+      }
     }
-    console.log('Scan terminé.');
-    };
+    // Sauvegarde finale
+  fs.writeFileSync(
+    PROGRESS_FILE,
+    JSON.stringify({
+      processedSignatures: Array.from(progress.processedSignatures),
+      lastBefore: progress.lastBefore,
+    }, null, 2)
+    );
+
+  console.log('Transactions retrieved.');
+}
 
 get_signatures();
