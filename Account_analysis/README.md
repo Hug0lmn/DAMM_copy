@@ -1,27 +1,38 @@
-# Folder: Analyse_Account
+# 📂 Folder: Analyse_Account
 
 ## 📄 Purpose
-This folder contains code related to the collection and analysis of pools and wallets in order to identify profitable wallets based on their transactions through Meteora DAMM v2 — with the potential goal of copying their transactions.
+This folder contains code for collecting and analyzing data on DAMM v2 pools and wallets in order to identify profitable wallets based on their transaction histories through Meteora DAMM v2 — with the potential goal of replicating their strategies.
 
-## 🔄 Next Improvements
+## 🔄 Planned Improvements
 
-- **Enhance `Check_trans_pool.ts`**  
-  Update the `Check_trans_pool.ts` file to calculate and display profitability, using a similar method as implemented in `Check_trans_wallet.ts`.
+- **Optimize Computation Time**  
+  Instead of manually running the script each time, implement a workflow to automatically identify the top-performing DAMM pools and analyze them without manual intervention.
 
 - **Add Wallet Activity Visualization**  
-  Create a new module or script dedicated to visualizing wallet activity. This should include charts or summaries of transaction patterns, volume, and any other insightful metrics.
+  Create a new module or script to visualize wallet activity, including charts or summaries of transaction patterns, volumes, and other insightful metrics.
 
 - **Implement Date-Based Filtering**  
-  Introduce an option to filter wallet transactions or signatures based on a specified date range. This will allow for more targeted analysis over specific time periods.
+  Add options to filter wallet transactions or signatures by a specified date range, enabling more targeted analysis over specific time periods.
+
+- **Improve Usability**  
+  Allow parameters (e.g., addresses, analysis type, output name) to be provided via command-line arguments, avoiding the need to manually modify the script for each run.
+
+- **Create a Personal Database**  
+  In addition to saving analysis results in JSON files, store them in a Supabase database for better organization, retrieval, and future analysis.
 
 ## 📦 Contents
-- `Get_transac.ts` – Retrieves a list of transactions for a specific address (pool or wallet).
-- `Check_trans_pool.ts` – Analyzes the different addresses adding/removing liquidity in a pool and evaluates the profitability of their movements.
-- `Check_trans_wallet.ts` – Analyzes liquidity interactions for a specific wallet and evaluates their profitability across pools.
+
+- **`Function.ts`** – Contains all utility functions used in `Analysis.ts`. Includes functions for retrieving transactions for specific addresses (wallets or pools).
+
+- **`Analysis.ts`** – The main analysis script. Depending on the chosen mode, it can:
+  - Analyze a single wallet’s DAMM performance (including capital gains from swapping tokens back to SOL).
+  - Identify top-performing wallets within a DAMM liquidity pool and analyze their performance.
 
 ## 🧪 How to Use
-First, run `Get_transac.ts` with a specific address and a specific number of max transactions — this can be a DAMM v2 liquidity pool or a wallet address.
 
-Depending on what you want to analyze:
-- **Liquidity Pool:** Run `Check_trans_pool.ts`
-- **Wallet:** Run `Check_trans_wallet.ts`
+1. Open `Analysis.ts`.
+2. Add your private Helius API key.
+3. Specify the address you want to analyze.
+4. Modify the JSON output filename as needed.
+5. Choose the type of analysis you want to perform.
+6. Run `Analysis.ts`.

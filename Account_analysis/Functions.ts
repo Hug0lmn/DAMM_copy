@@ -28,7 +28,7 @@ async function fetchTransaction(signatures : Array<string>, Helius_API_KEY : str
         } else if (!res.ok) {
         // HTTP response 429 Too Many Requests or 500
             console.error(`HTTP Error ${res.status}: ${res.statusText}`);
-            await delay(200 * Math.pow(2, retries));
+            await delay(400 * Math.pow(2, retries));
             retries ++;
             continue;
         }

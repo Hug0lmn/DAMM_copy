@@ -19,6 +19,8 @@ While these products are available, they take a small portion of your profit as 
 
 I recognize that since the two products mentioned above already have mindshare in the DLMM copy trading space, my goal wasn't to replace or compete with them but rather to create a personal alternative.
 
+Right now, the focus on this project is to improved the Analysis.
+
 ## 🏗️ Architecture Overview
 
 This project originally began as a fork of another repository — a **Telegram bot** using a **Cloudflare Worker** to track wallet transactions on Solana. However, due to Cloudflare's limited execution time (which made it hard to automate NFT minting, liquidity management, etc.), I split the code into two components:
